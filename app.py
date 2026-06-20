@@ -2,9 +2,9 @@ import streamlit as st
 
 pg = st.navigation(
     [
-        st.Page("pgs/home.py", title="Home", icon="🏠"),
-        st.Page("pgs/upload.py", title="Upload File", icon="🗳️"), 
-        st.Page("pgs/chat.py", title="Chat with Graph" , icon="🦜"),
+        st.Page("streamlit_pages/home.py", title="Home", icon="🏠"),
+        st.Page("streamlit_pages/upload.py", title="Upload File", icon="🗳️"),
+        st.Page("streamlit_pages/chat.py", title="Chat with Graph" , icon="🦜"),
     ]
 )
 

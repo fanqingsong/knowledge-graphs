@@ -79,9 +79,9 @@ This is what a Knowledge Graph looks like in Neo4j:
 
 ## 👑 Streamlit Web App
 To showcase how the code works, a [Streamlit App](https://streamlit.io/cloud) has been built with the following pages:
-* [Home](pgs/home): mostly here to help the user navigate the web app; 
-* [Upload](pgs/upload.py): Upload documents into Neo4j following a pipeline of commands;
-* [Chat](pgs/chat.py): Chat with the Knowledge Graph with various retrieval strategies (see the previous section).
+* [Home](streamlit_pages/home): mostly here to help the user navigate the web app; 
+* [Upload](streamlit_pages/upload.py): Upload documents into Neo4j following a pipeline of commands;
+* [Chat](streamlit_pages/chat.py): Chat with the Knowledge Graph with various retrieval strategies (see the previous section).
 
 > 💡 before running the app, ensure you have 
 > * an active instance of Neo4j (either in the cloud with Aura or locally deployed)
@@ -134,7 +134,11 @@ Currently, when uploading a one or more files inside the Streamlit App (see belo
 6. upload the obtained vectors and entities into the Knowledge Graph;
 7. update the centralities measures and the division of the Graph into communities.
 
-In the near future, the plan is to integrate additional (optional) steps, such as one for [entity resolution](https://en.wikipedia.org/wiki/Record_linkage) and one for [link prediction](https://en.wikipedia.org/wiki/Link_prediction) between entities. 
+> 💡 Want to understand what these "communities" are, how Leiden/Louvain detection works, and how community summaries enable global Q&A? See **[docs/community.en.md](docs/community.en.md)** (concepts) and **[docs/community-theory.en.md](docs/community-theory.en.md)** (math & algorithm principles).
+
+In the near future, the plan is to integrate additional (optional) steps, such as one for [entity resolution](https://en.wikipedia.org/wiki/Record_linkage) and one for [link prediction](https://en.wikipedia.org/wiki/Link_prediction) between entities.
+
+> 💡 For a detailed, stage-by-stage walkthrough of the Upload/ingestion pipeline (load → clean → chunk → embed → graph-mine → store → communities → reports), see **[docs/upload-pipeline.en.md](docs/upload-pipeline.en.md)**.
 
 Step #5 is probably the less obvious one. It is performed using an agent called `GraphExtractor` that will output a structured output mimicking a `pydantic` class:
 
@@ -167,7 +171,7 @@ class _Graph(Serializable):
 ````
 
 ### Ontologies
-When extracting a Knowledge Graph from documents chunks, it might make sense to give the [`GraphExtractor`](src/agents/graph_extractor.py) in charge of this task an `Ontology` in the form of a `pydantic` class:  
+When extracting a Knowledge Graph from documents chunks, it might make sense to give the [`GraphExtractor`](graphrag/agents/graph_extractor.py) in charge of this task an `Ontology` in the form of a `pydantic` class:  
 
 ````
 class Ontology(BaseModel):
@@ -178,10 +182,10 @@ class Ontology(BaseModel):
 
 Since ontologies are by definition domain-dependent, what happens when the user is not a SME or a domain expert? 
 
-My suggestion is to use another Agent called [`OntologyExplorer`](src/agents/ontology_explorer.py) to infer the ontology of the domain from a subset of chunks; the output of this agent will be one of the inputs for the `GraphExtractor`.
+My suggestion is to use another Agent called [`OntologyExplorer`](graphrag/agents/ontology_explorer.py) to infer the ontology of the domain from a subset of chunks; the output of this agent will be one of the inputs for the `GraphExtractor`.
 
 ## 🦜 How to Chat with the Graph
-Once documents are uploaded inside the Knowledge Graph, the user can query it using the [`GraphAgentResponder`](src/agents/graph_qa.py). Under the hood, we have a basic agent that runs via LLM / Embeddings API calls and has many available strategies to traverse the graph. 
+Once documents are uploaded inside the Knowledge Graph, the user can query it using the [`GraphAgentResponder`](graphrag/agents/graph_qa.py). Under the hood, we have a basic agent that runs via LLM / Embeddings API calls and has many available strategies to traverse the graph. 
 
 ### Retrieval Strategies
 The `GraphAgentResponder` has many strategies at its disposal to query and traverse the Knowledge Graph to answer the user's query.  
