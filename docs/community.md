@@ -2,6 +2,7 @@
 
 > 本文档解释本项目（GraphRAG 风格的知识图谱问答系统）中"社区"的概念、它在流程中的作用，以及对应的代码实现位置。
 > 🔬 想深入了解背后的数学与算法原理（模块度、Louvain/Leiden 差异、社区摘要为何能解决全局问答）？见 **[community-theory.md](community-theory.md)**。
+> 🛠️ 想逐行追踪代码实现（计算→存储→Chunk 打标签→关联报告，含具体 Cypher 与函数位置）？见 **[community-implementation.md](community-implementation.md)**。
 
 ## 1. 什么是社区
 
