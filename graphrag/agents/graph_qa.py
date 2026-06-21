@@ -43,6 +43,24 @@ def get_question_answering_prompt() -> PromptTemplate:
 
 
 def get_rephrase_prompt() -> PromptTemplate:
+    """Build the prompt that rewrites a user question to match the graph schema.
+
+    Used when ``GraphAgentResponder`` is configured with ``rephrase_llm_conf``.
+    ``_rephrase()`` invokes this template (with ``graph_labels`` / ``graph_relationships``
+    bound at init) before ``answer_with_cypher()`` and ``answer()``, so the Cypher chain
+    receives a question phrased in terms of Document, Chunk, and graph relationships
+    instead of colloquial wording. The LLM must not invent facts—only rephrase.
+
+    Examples:
+        - User: "第三章讲了什么？"
+          Rephrased: "What text appears in the Chunk reached by two NEXT hops from the
+          first Chunk of the Document?"
+        - User: "这篇文档里提到了哪些人？"
+          Rephrased: "Which Person nodes are linked to Chunk nodes via MENTIONS?"
+        - User: "刚才那份 PDF 的结论是什么？"  (history mentions 背影.pdf)
+          Rephrased: "What do Chunk nodes with PART_OF to the Document whose filename
+          is '背影.pdf' say about the conclusion?"
+    """
 
     prompt = """
         Your task is to rephrase a user's question based on the schema of a Graph Database that will be given to you.
@@ -352,14 +370,47 @@ class GraphAgentResponder:
         community_type: str = "leiden",
         history: Optional[str] = None
     ) -> str:
-        """
-        Answers after querying for communities:
+        """Answer using community reports plus entity structure and chunk-level mentions.
 
-        * read the most relevant community reports
-        * fetch chunks belonging to the most relevant community (the one from the community report)
-        * follow the MENTIONS relationship of each Chunk and obtain a dictionary
-        * fetch the community subgraph under the form of another dictionary
-        * passes the dictionaries + the report to a reconciler agent to decide how to answer
+        Retrieval flow:
+            1. Vector-search the most relevant ``CommunityReport`` (``k=1``).
+            2. Enrich context with graph traversals and chunk search inside that community.
+            3. Synthesize an answer via ``qa_prompt_with_subgraph``.
+
+        ``community_subgraph`` (``KnowledgeGraph.community_subgraph``):
+            Cypher-filters the graph to non-``Chunk`` nodes that share the report's
+            ``community_{community_type}`` id, returning every intra-community edge as
+            ``{node_1, relationship, node_2}`` dicts (community metadata stripped).
+            Gives the LLM the **entity-relationship skeleton** of the community—e.g.
+            who is linked to whom or which concepts co-occur—without raw chunk text.
+
+        ``mentioned_entities`` (``KnowledgeGraph.mentioned_entities``):
+            For each chunk retrieved by similarity search within the community, follows
+            ``(Chunk)-[:MENTIONS]->(entity)`` and returns the mentioned entity nodes
+            (as property dicts; here only ``name`` is written into context).
+            Grounds each chunk's **text evidence** in the specific entities that passage
+            refers to, bridging narrative content and the community's entity graph.
+
+        Together, the report summarizes the theme, ``community_subgraph`` shows how
+        entities relate, and chunk + ``mentioned_entities`` pairs tie facts to sources.
+
+        Example (query: "父亲在车站为作者做了什么？", community_id=3):
+
+            CommunityReport::
+                "该社区围绕《背影》中浦口车站送别场景，涉及朱自清与父亲在月台的互动。"
+
+            community_subgraph → COMMUNITY GRAPH in context::
+                {"node_1": {"name": "父亲"}, "relationship": {"type": "RELATED_TO"},
+                 "node_2": {"name": "浦口车站"}}
+                {"node_1": {"name": "朱自清"}, "relationship": {"type": "RELATED_TO"},
+                 "node_2": {"name": "父亲"}}
+
+            search_chunks (filtered to community 3) + mentioned_entities per chunk::
+                CHUNK CONTENT: "...父亲蹒跚地走到铁道边，慢慢探身下去..."
+                MENTIONED ENTITIES: 父亲 \\n 月台 \\n 铁道
+
+            The LLM sees the report (theme), the subgraph (who connects to whom),
+            and each passage with its entity anchors, then answers in one pass.
         """
         context = ""
 
