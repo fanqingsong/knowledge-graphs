@@ -4,9 +4,9 @@ from dotenv import load_dotenv
 import streamlit as st
 
 from graphrag.agents.graph_qa import GraphAgentResponder
-from graphrag.config import Configuration, Source, ChunkerConf, LLMConf, EmbedderConf, KnowledgeGraphConfig
-from graphrag.graph.knowledge_graph import KnowledgeGraph
-from graphrag.ingestion.embedder import ChunkEmbedder
+from graphrag.core.config import Configuration, Source, ChunkerConf, LLMConf, EmbedderConf, KnowledgeGraphConfig
+from graphrag.graph import KnowledgeGraph
+from graphrag.core.embeddings import get_embeddings
 
 SOURCE_FOLDER = f"{os.getcwd()}/source_docs"
 
@@ -21,6 +21,10 @@ def get_configuration_from_env() -> Configuration:
                 password=os.getenv("NEO4J_PASSWORD"),
                 index_name=os.getenv("INDEX_NAME"),
                 community_source=os.getenv("COMMUNITY_SOURCE", "full"),
+                # ontology: pass an Ontology instance in code, e.g.
+                #   from graphrag.ontologies import beiyin_ontology
+                #   ontology=beiyin_ontology
+                # (name-based selection from .env has been removed)
             ),
             source_conf=Source(folder=SOURCE_FOLDER),
             chunker_conf=ChunkerConf(
@@ -56,23 +60,31 @@ def get_configuration_from_env() -> Configuration:
             )
         )
         return conf
-    else: 
+    else:
         st.error("Neither a Configuration file nor an Environment file has been passed!")
 
 
+@st.cache_data
+def get_configuration() -> Configuration:
+    """Load configuration: prefer `./configuration.json`, fall back to env."""
+    try:
+        return Configuration.from_file(f"{os.getcwd()}/configuration.json")
+    except Exception:
+        return get_configuration_from_env()
+
+
 @st.cache_resource
-def get_knowledge_graph(_conf: Configuration, _embedder: ChunkEmbedder):
+def get_knowledge_graph(_conf: Configuration, _embedder):
     kg = KnowledgeGraph(
-        conf=_conf.database, 
-        embeddings_model=_embedder.embeddings,
+        conf=_conf.database,
+        embeddings_model=_embedder,
     )
     return kg
 
 
 @st.cache_resource
 def get_embedder(_embedder_conf: EmbedderConf):
-    embedder = ChunkEmbedder(conf=_embedder_conf)
-    return embedder
+    return get_embeddings(_embedder_conf)
 
 
 @st.cache_resource

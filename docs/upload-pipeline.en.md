@@ -117,5 +117,4 @@ Run **once for each of `leiden` and `louvain`**:
 
 - **Sequential, no concurrency**: the pipeline processes documents and chunks one at a time; stage ⑤ (LLM extraction) is the dominant cost.
 - **Vector-index creation is commented out**: the `index_exists()/create_index()` block in `upload.py` is a `# TODO`; ingestion relies on an existing index (`INDEX_NAME`) provisioned at deploy time.
-- **Backfilling reports without re-ingesting**: if existing data is missing `CommunityReport`s, run `scripts/generate_community_reports.py` instead (see `DEPLOYMENT_CN.md` §8.1).
 - **Re-ingestion creates duplicate nodes**: no dedup/entity resolution exists today; to start fresh, stop the services, `./bin/stop.sh -v` to delete the data volume, and restart.

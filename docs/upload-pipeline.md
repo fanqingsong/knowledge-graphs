@@ -115,5 +115,4 @@ source_docs/*.pdf,docx,txt,html
 
 - **顺序处理、无并发**：流水线逐文档、逐 chunk 串行；第⑤步（LLM 抽取）是主要耗时点。
 - **向量索引创建被注释**：`upload.py` 中 `index_exists()/create_index()` 段为 `# TODO`，依赖部署侧已存在的索引（`INDEX_NAME`）。
-- **补社区报告无需重跑摄入**：若旧数据缺 `CommunityReport`，可用 `scripts/generate_community_reports.py` 单独补（见 `DEPLOYMENT_CN.md` §8.1）。
 - **重复摄入会产生重复节点**：当前未做去重/实体消歧；如需清空重来，停服务后 `./bin/stop.sh -v` 删除数据卷再重启。

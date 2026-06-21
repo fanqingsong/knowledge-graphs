@@ -128,7 +128,7 @@ QA_MODEL_ENDPOINT=https://open.bigmodel.cn/api/coding/paas/v4/
 | `openai` / `azure-openai` | LLM / Embedding | OpenAI / Azure |
 | `groq` / `google` | LLM | Groq / Gemini |
 
-工厂代码：`graphrag/factory/llm.py`、`graphrag/factory/embeddings.py`。
+工厂代码：`graphrag/utils/llm.py`、`graphrag/utils/embeddings.py`。
 
 新增本地推理类型（HuggingFace / Ollama）的依赖已移除，以避免拉取 torch/CUDA 等数 GB 的包；如需恢复，再加回 `langchain-huggingface` / `langchain-ollama` 及对应分支即可。
 
@@ -172,19 +172,9 @@ Docker 守护进程的 registry 镜像源在 `/etc/docker/daemon.json` 配置。
 
 > 📖 关于"社区"的概念、Leiden/Louvain 检测原理以及社区摘要如何支撑全局问答，见独立文档：**[docs/community.md](docs/community.md)**。
 
-这两种模式检索的是 **CommunityReport**（社区摘要报告）向量库，而非社区分区本身。摄入流程会自动做**社区检测**（Leiden/Louvain 分区），但**社区摘要报告**需要单独生成——本项目已把摘要生成接线进摄入流程，并为已有数据提供补报告工具。
+这两种模式检索的是 **CommunityReport**（社区摘要报告）向量库，而非社区分区本身。摄入流程会自动做**社区检测**（Leiden/Louvain 分区），并由 `IngestionPipeline` 在摄入末尾自动调用 `CommunitiesSummarizer`（智谱生成摘要 + 硅基流动向量化）为 leiden / louvain 两种分区各生成一份社区摘要报告——无需任何额外操作。
 
-**新摄入的文档**：`streamlit_pages/upload.py` 在摄入末尾会自动调用 `CommunitiesSummarizer`（智谱生成摘要 + 硅基流动向量化）为 leiden / louvain 两种分区各生成一份报告，无需额外操作。
-
-**已摄入但缺报告的旧数据**（无需重新摄入，避免产生重复节点）：在容器内运行补报告脚本：
-
-```bash
-docker exec -e PYTHONPATH=/knowledge-graphs kg-app python scripts/generate_community_reports.py
-# 期望输出：
-# [leiden] communities=N reports_stored=M
-# [louvain] communities=N reports_stored=M
-# Done. Communities / Subgraph answering modes are now usable.
-```
+> 若旧数据是在启用自动摘要前摄入的、因而缺失 `CommunityReport`，需重新摄入这些文档（目前没有独立的补报告工具）。
 
 验证报告是否生成：
 
@@ -224,8 +214,6 @@ docker exec kg-neo4j cypher-shell -u neo4j -p password123 \
 ├── config_example.env      # 配置模板（智谱 + 硅基流动）
 ├── .env                    # 本地实际配置（gitignored，由 start.sh 生成）
 ├── requirements.txt        # 已移除 torch/ollama 相关本地推理依赖
-├── scripts/
-│   └── generate_community_reports.py  # 为已有数据补社区摘要报告
 ├── app.py                  # Streamlit 多页入口
 ├── streamlit_pages/        # 页面：home / upload / chat
 └── graphrag/

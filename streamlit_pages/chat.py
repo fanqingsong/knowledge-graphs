@@ -1,10 +1,6 @@
-import os
-
 import streamlit as st
 
-from graphrag.config import Configuration
-
-from streamlit_pages.utils import get_configuration_from_env, get_embedder, get_knowledge_graph, get_responder
+from streamlit_pages.utils import get_configuration, get_embedder, get_knowledge_graph, get_responder
 
 st.set_page_config(
     page_title="Chat",
@@ -26,22 +22,10 @@ st.markdown(
     """
 )
 
-CONF_PATH = f"{os.getcwd()}/configuration.json"
-
-env = False
-conf = None
-
-st.session_state["answer_method"] = None
-st.session_state["community_to_use"] = None
-st.session_state["adjacent_chunks"] = False
-
 answering_options = ["Similarity Search", "Cypher", "Communities", "Subgraph", "Combine"]
 community_options = ["leiden", "louvain"]
 
-try:
-    conf = Configuration.from_file(CONF_PATH)
-except Exception as e:
-    conf = get_configuration_from_env()
+conf = get_configuration()
     
 if conf:
     embedder = get_embedder(conf.embedder_conf)
@@ -50,7 +34,7 @@ if conf:
 
     responder = get_responder(conf, knowledge_graph)
 
-    if knowledge_graph._driver.verify_authentication():
+    if knowledge_graph.verify_connection():
         
         with st.expander(label="**Graph Metrics**", icon="📊", expanded=True):
             #TODO cache data here 
